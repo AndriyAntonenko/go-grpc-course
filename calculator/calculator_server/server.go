@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"net"
 
@@ -23,7 +24,7 @@ func (s *server) Sum(ctx context.Context, req *calculatorpb.SumRequest) (*calcul
 
 func (s *server) NumberDecomposition(req *calculatorpb.NumberDecompositionRequest, stream calculatorpb.SumService_NumberDecompositionServer) error {
 	value := req.GetValue()
-	var k int64 = 2
+	var k int32 = 2
 	for {
 		if value <= 1 {
 			break
@@ -41,6 +42,25 @@ func (s *server) NumberDecomposition(req *calculatorpb.NumberDecompositionReques
 	}
 
 	return nil
+}
+
+func (s *server) ComputeAverage(stream calculatorpb.SumService_ComputeAverageServer) error {
+	var sum int32 = 0
+	var count int32 = 0
+	for {
+		req, err := stream.Recv()
+		if err == io.EOF {
+			return stream.SendAndClose(&calculatorpb.ComputeAverageResponse{
+				Result: float32(sum) / float32(count),
+			})
+		}
+		if err != nil {
+			log.Fatalf("error while receiving request %v", err)
+		}
+
+		sum += req.GetValue()
+		count += 1
+	}
 }
 
 func main() {

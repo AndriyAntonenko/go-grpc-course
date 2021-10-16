@@ -4,8 +4,8 @@ package calculator;
 option go_package="./calculator/calculatorpb";
 
 message Sum {
-    int64 a = 1;
-    int64 b = 2;
+    int32 a = 1;
+    int32 b = 2;
 }
 
 message SumRequest {
@@ -13,15 +13,23 @@ message SumRequest {
 }
 
 message SumResponse {
-    int64 result = 1;
+    int32 result = 1;
 }
 
 message NumberDecompositionRequest {
-    int64 value = 1;
+    int32 value = 1;
 }
 
 message NumberDecompositionResponse {
-    int64 primeNumber = 1;
+    int32 primeNumber = 1;
+}
+
+message ComputeAverageRequest {
+    int32 value = 1;
+}
+
+message ComputeAverageResponse {
+    float result = 1;
 }
 
 service SumService{
@@ -29,4 +37,6 @@ service SumService{
     rpc Sum(SumRequest) returns (SumResponse) {};
 
     rpc NumberDecomposition(NumberDecompositionRequest) returns (stream NumberDecompositionResponse) {};
+
+    rpc ComputeAverage(stream ComputeAverageRequest) returns(ComputeAverageResponse) {};
 }

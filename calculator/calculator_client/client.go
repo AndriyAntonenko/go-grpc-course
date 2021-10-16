@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 
 	"github.com/AndriyAntonenko/go-grpc-course/calculator/calculatorpb"
@@ -19,7 +20,8 @@ func main() {
 
 	fmt.Println("Calculator client is running")
 	c := calculatorpb.NewSumServiceClient(cc)
-	calculateSum(c)
+	// calculateSum(c)
+	numberDecomposition(c)
 }
 
 func calculateSum(c calculatorpb.SumServiceClient) {
@@ -35,4 +37,26 @@ func calculateSum(c calculatorpb.SumServiceClient) {
 		log.Fatalf("error while calling Sum RPC: %v", err)
 	}
 	fmt.Printf("Response from Sum: %v", res.Result)
+}
+
+func numberDecomposition(c calculatorpb.SumServiceClient) {
+	req := &calculatorpb.NumberDecompositionRequest{
+		Value: 44,
+	}
+
+	stream, err := c.NumberDecomposition(context.Background(), req)
+	if err != nil {
+		log.Fatalf("error while calling NumberDecomposition RPC: %v", err)
+	}
+
+	for {
+		res, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.Fatalf("error while reading stream: %v", err)
+		}
+		fmt.Printf("Prime number: %v\n", res.PrimeNumber)
+	}
 }

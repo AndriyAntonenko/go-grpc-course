@@ -21,6 +21,28 @@ func (s *server) Sum(ctx context.Context, req *calculatorpb.SumRequest) (*calcul
 	return &res, nil
 }
 
+func (s *server) NumberDecomposition(req *calculatorpb.NumberDecompositionRequest, stream calculatorpb.SumService_NumberDecompositionServer) error {
+	value := req.GetValue()
+	var k int64 = 2
+	for {
+		if value <= 1 {
+			break
+		}
+
+		if value%k == 0 {
+			stream.Send(&calculatorpb.NumberDecompositionResponse{
+				PrimeNumber: k,
+			})
+			value = value / k
+			continue
+		}
+
+		k += 1
+	}
+
+	return nil
+}
+
 func main() {
 	lis, err := net.Listen("tcp", "0.0.0.0:50051")
 	if err != nil {

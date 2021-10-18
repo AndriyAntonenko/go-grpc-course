@@ -9,6 +9,8 @@ import (
 
 	"github.com/AndriyAntonenko/go-grpc-course/calculator/calculatorpb"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func main() {
@@ -24,7 +26,8 @@ func main() {
 	// calculateSum(c)
 	// numberDecomposition(c)
 	// computeAverage(c)
-	findMaximum(c)
+	// findMaximum(c)
+	squareRoot(c)
 }
 
 func calculateSum(c calculatorpb.SumServiceClient) {
@@ -135,4 +138,34 @@ func findMaximum(c calculatorpb.SumServiceClient) {
 	}()
 
 	<-waitChanel
+}
+
+func squareRoot(c calculatorpb.SumServiceClient) {
+	// correct call
+	doErrorCall(c, 10)
+
+	// error call
+	doErrorCall(c, -10)
+}
+
+func doErrorCall(c calculatorpb.SumServiceClient, number int32) {
+	res, err := c.SquareRoot(context.Background(), &calculatorpb.SquareRootRequest{
+		Number: number,
+	})
+
+	if err != nil {
+		resErr, ok := status.FromError(err)
+		if !ok {
+			log.Fatalf("big error calling SquareRoot RPC: %v\n", err)
+		}
+
+		// grpc error
+		fmt.Println(resErr.Message())
+		fmt.Println(resErr.Code())
+		if resErr.Code() == codes.InvalidArgument {
+			fmt.Println("we probably set negative number!")
+			return
+		}
+	}
+	fmt.Printf("result of square root of %v is %v\n", number, res.GetNumberRoot())
 }

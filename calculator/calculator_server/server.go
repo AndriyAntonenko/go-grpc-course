@@ -63,6 +63,42 @@ func (s *server) ComputeAverage(stream calculatorpb.SumService_ComputeAverageSer
 	}
 }
 
+func findMaxValue(values []float32) float32 {
+	max := values[0]
+	for i := 1; i < len(values); i++ {
+		current := values[i]
+		if current > max {
+			max = current
+		}
+	}
+	return max
+}
+
+func (s *server) FindMaximum(stream calculatorpb.SumService_FindMaximumServer) error {
+	values := []float32{}
+	for {
+		req, err := stream.Recv()
+		if err == io.EOF {
+			return nil
+		}
+		if err != nil {
+			log.Fatalf("error while receiving data %v", err)
+			return err
+		}
+
+		values = append(values, req.GetValue())
+		max := findMaxValue(values)
+		err = stream.Send(&calculatorpb.FindMaximumResponse{
+			Max: max,
+		})
+
+		if err != nil {
+			log.Fatalf("error while sending data %v", err)
+			return err
+		}
+	}
+}
+
 func main() {
 	lis, err := net.Listen("tcp", "0.0.0.0:50051")
 	if err != nil {

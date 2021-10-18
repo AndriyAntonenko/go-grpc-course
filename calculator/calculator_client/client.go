@@ -23,7 +23,8 @@ func main() {
 	c := calculatorpb.NewSumServiceClient(cc)
 	// calculateSum(c)
 	// numberDecomposition(c)
-	computeAverage(c)
+	// computeAverage(c)
+	findMaximum(c)
 }
 
 func calculateSum(c calculatorpb.SumServiceClient) {
@@ -90,4 +91,48 @@ func computeAverage(c calculatorpb.SumServiceClient) {
 		log.Fatalf("error while receiving data from ComputeAverage RPC: %v", err)
 	}
 	fmt.Printf("Average is: %v", result.GetResult())
+}
+
+func findMaximum(c calculatorpb.SumServiceClient) {
+	stream, err := c.FindMaximum(context.Background())
+	if err != nil {
+		log.Fatalf("error while calling FindMaximum RPC: %v", err)
+	}
+
+	requests := []*calculatorpb.FindMaximumRequest{
+		{Value: 10},
+		{Value: 5},
+		{Value: 15},
+		{Value: 20},
+	}
+
+	waitChanel := make(chan struct{})
+
+	go func() {
+		for _, req := range requests {
+			fmt.Printf("Sending request: %v\n", req)
+			err := stream.Send(req)
+			if err != nil {
+				log.Fatalf("error while sending data: %v\n", err)
+			}
+		}
+		stream.CloseSend()
+	}()
+
+	go func() {
+		for {
+			res, err := stream.Recv()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				fmt.Printf("error while receiving data: %v\n", err)
+				break
+			}
+			fmt.Printf("Maximum is: %v\n", res.GetMax())
+		}
+		close(waitChanel)
+	}()
+
+	<-waitChanel
 }

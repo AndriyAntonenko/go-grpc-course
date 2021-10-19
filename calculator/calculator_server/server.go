@@ -11,6 +11,7 @@ import (
 	"github.com/AndriyAntonenko/go-grpc-course/calculator/calculatorpb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
 )
 
@@ -125,6 +126,9 @@ func main() {
 	s := grpc.NewServer()
 	calculatorpb.RegisterSumServiceServer(s, &server{})
 	fmt.Println("Calculator server is running!!!")
+
+	reflection.Register(s)
+
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to servie %v", err)
 	}

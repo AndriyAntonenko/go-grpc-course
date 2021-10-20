@@ -4,3 +4,4 @@ ssl/server.crt
 ssl/server.key
 ssl/server.pem
 ssl/server.csr
+.env

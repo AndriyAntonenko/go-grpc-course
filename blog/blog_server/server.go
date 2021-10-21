@@ -14,11 +14,10 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
-type server struct{}
-
-// TODO: split code into files
 type Config struct {
 	MongoUser string
 	MongoPass string
@@ -27,14 +26,7 @@ type Config struct {
 	MongoDB   string
 }
 
-type blogItem struct {
-	ID       primitive.ObjectID `bson:"_id,omitempty"`
-	AuthorID string             `bson:"author_id"`
-	Content  string             `bson:"content"`
-	Title    string             `bson:"title"`
-}
-
-func InitAppConfig() *Config {
+func initAppConfig() *Config {
 	var err error
 	var configInstance *Config
 
@@ -54,8 +46,15 @@ func InitAppConfig() *Config {
 	return configInstance
 }
 
+type blogItem struct {
+	ID       primitive.ObjectID `bson:"_id,omitempty"`
+	AuthorID string             `bson:"author_id"`
+	Content  string             `bson:"content"`
+	Title    string             `bson:"title"`
+}
+
 func connectMongo(config *Config) *mongo.Client {
-	connectionString := "mongodb://" + config.MongoUrl + ":" + config.MongoPass + "@" + config.MongoUrl + ":" + config.MongoPort
+	connectionString := "mongodb://" + config.MongoUser + ":" + config.MongoPass + "@" + config.MongoUrl + ":" + config.MongoPort + "/" + config.MongoDB
 	mongoClient, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(connectionString))
 	if err != nil {
 		log.Fatalf("error connect to mongo db %v\n", connectionString)
@@ -63,20 +62,55 @@ func connectMongo(config *Config) *mongo.Client {
 	return mongoClient
 }
 
-func getBlogCollection(mongoClient *mongo.Client, config *Config) *mongo.Collection {
-	if mongoClient == nil {
-		log.Fatalf("connection is nil")
+var collection *mongo.Collection
+
+type server struct{}
+
+func (s server) CreateBlog(ctx context.Context, req *blogpb.CreateBlogRequest) (*blogpb.CreateBlogResponse, error) {
+	fmt.Println("CreateBlog rpc is running")
+	blog := req.GetBlog()
+
+	data := blogItem{
+		AuthorID: blog.GetAuthorId(),
+		Title:    blog.GetTitle(),
+		Content:  blog.GetContent(),
 	}
-	return mongoClient.Database(config.MongoDB).Collection("blog")
+	fmt.Println(data)
+
+	res, err := collection.InsertOne(context.Background(), data)
+	if err != nil {
+		return nil, status.Errorf(
+			codes.Internal,
+			fmt.Sprintf("Internal error: %v", err),
+		)
+	}
+
+	oid, ok := res.InsertedID.(primitive.ObjectID)
+	if !ok {
+		return nil, status.Errorf(
+			codes.Internal,
+			fmt.Sprintf("Cannot convert to OID"),
+		)
+	}
+
+	fmt.Println("Blog created successfully")
+	return &blogpb.CreateBlogResponse{
+		Blog: &blogpb.Blog{
+			Id:       oid.Hex(),
+			AuthorId: blog.GetAuthorId(),
+			Title:    blog.GetTitle(),
+			Content:  blog.GetContent(),
+		},
+	}, nil
 }
 
 func main() {
-	config := InitAppConfig()
+	config := initAppConfig()
 	mongoClient := connectMongo(config)
 	// if we crash the go code, we get the file name and line number
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
-	getBlogCollection(mongoClient, config)
+	collection = mongoClient.Database(config.MongoDB).Collection("blog")
 
 	lis, err := net.Listen("tcp", "0.0.0.0:50051")
 	if err != nil {

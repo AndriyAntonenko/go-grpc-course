@@ -6,11 +6,19 @@ option go_package = "./blog/blogpb";
 
 message Blog {
     string id = 1;
-    string authro_id = 2;
+    string author_id = 2;
     string title = 3;
     string content = 4;
 }
 
-service BlogService {
+message CreateBlogRequest {
+    Blog blog = 1;
+}
 
+message CreateBlogResponse {
+    Blog blog = 1; // will have blog id
+}
+
+service BlogService {
+    rpc CreateBlog(CreateBlogRequest) returns (CreateBlogResponse) {};
 }
